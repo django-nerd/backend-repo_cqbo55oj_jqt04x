@@ -1,48 +1,60 @@
 """
-Database Schemas
+Database Schemas for Flomote – Slimmer werken met AI
 
-Define your MongoDB collection schemas here using Pydantic models.
-These schemas are used for data validation in your application.
-
-Each Pydantic model represents a collection in your database.
-Model name is converted to lowercase for the collection name:
-- User -> "user" collection
-- Product -> "product" collection
-- BlogPost -> "blogs" collection
+Each Pydantic model corresponds to a MongoDB collection (collection name is the lowercased class name).
+Use these schemas for validation of inbound/outbound payloads and for the DB helper functions.
 """
 
-from pydantic import BaseModel, Field
-from typing import Optional
+from pydantic import BaseModel, Field, EmailStr
+from typing import Optional, List, Literal
 
-# Example schemas (replace with your own):
+# Core business entities
 
-class User(BaseModel):
-    """
-    Users collection schema
-    Collection name: "user" (lowercase of class name)
-    """
-    name: str = Field(..., description="Full name")
-    email: str = Field(..., description="Email address")
-    address: str = Field(..., description="Address")
-    age: Optional[int] = Field(None, ge=0, le=120, description="Age in years")
-    is_active: bool = Field(True, description="Whether user is active")
+class Company(BaseModel):
+    name: str = Field(..., description="Bedrijfsnaam")
+    sector: str = Field(..., description="Sector of branche")
+    employees: int = Field(..., ge=1, le=500, description="Aantal medewerkers")
+    contact_name: Optional[str] = Field(None, description="Naam contactpersoon")
+    contact_email: Optional[EmailStr] = Field(None, description="E-mailadres contactpersoon")
 
-class Product(BaseModel):
-    """
-    Products collection schema
-    Collection name: "product" (lowercase of class name)
-    """
-    title: str = Field(..., description="Product title")
-    description: Optional[str] = Field(None, description="Product description")
-    price: float = Field(..., ge=0, description="Price in dollars")
-    category: str = Field(..., description="Product category")
-    in_stock: bool = Field(True, description="Whether product is in stock")
+class QuickScan(BaseModel):
+    company_name: str = Field(..., description="Bedrijfsnaam (koppeling)")
+    sector: str = Field(..., description="Sector")
+    employees: int = Field(..., ge=1, le=500, description="Aantal medewerkers")
+    challenges: List[str] = Field(default_factory=list, description="Huidige uitdagingen")
+    goals: Optional[List[str]] = Field(default=None, description="Doelen/prioriteiten")
 
-# Add your own schemas here:
-# --------------------------------------------------
+class Workflow(BaseModel):
+    company_name: str = Field(..., description="Koppeling naar bedrijf")
+    category: Literal["marketing", "analyse", "klantenservice", "hr", "financien", "operations"]
+    title: str
+    description: str
+    status: Literal["gepland", "actief", "gepauzeerd"] = "gepland"
 
-# Note: The Flames database viewer will automatically:
-# 1. Read these schemas from GET /schema endpoint
-# 2. Use them for document validation when creating/editing
-# 3. Handle all database operations (CRUD) directly
-# 4. You don't need to create any database endpoints!
+class ContactRequest(BaseModel):
+    name: str
+    email: EmailStr
+    company: Optional[str] = None
+    message: Optional[str] = None
+    topic: Literal["offerte", "kennismaking", "advies", "overig"] = "kennismaking"
+
+class Pitch(BaseModel):
+    name: str
+    company: Optional[str] = None
+    sector: Optional[str] = None
+    pain_points: Optional[List[str]] = None
+    tone: Literal["formeel", "vriendelijk", "to-the-point"] = "vriendelijk"
+
+# Response models
+
+class AdviceItem(BaseModel):
+    category: str
+    title: str
+    impact: Literal["laag", "middel", "hoog"]
+    effort: Literal["laag", "middel", "hoog"]
+    description: str
+
+class AdviceReport(BaseModel):
+    summary: str
+    recommendations: List[AdviceItem]
+
